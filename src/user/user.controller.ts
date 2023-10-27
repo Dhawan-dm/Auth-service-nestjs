@@ -2,8 +2,12 @@ import {
   Body,
   Controller,
   Post,
+  Get,
+  Patch,
   HttpException,
   HttpStatus,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './Dtos/create-users.dto';
@@ -11,6 +15,12 @@ import { getErrorCodeAndMessage } from 'src/helpers';
 import { ResendOtpDto } from './Dtos/resend-otp-dto';
 import { LeadService } from './lead.service';
 import { SigninUserDto } from './Dtos/signin-user.dto';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { UploadFileDto } from './Dtos/upload-file.dto';
+import { get } from 'lodash';
+import { FilesUploaded } from 'src/Types';
+import { ImageUrlDto } from './Dtos/image-url.dto';
+import { S3Service } from 'src/s3/s3.service';
 
 const sgMail = require('@sendgrid/mail');
 
@@ -19,6 +29,7 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly leadService: LeadService,
+    private readonly s3Service: S3Service,
   ) {}
 
   @Post('signup')
@@ -121,5 +132,42 @@ export class UserController {
         HttpStatus.BAD_REQUEST,
       );
     }
+  }
+
+  @Patch('/upload-file')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'profileImage', maxCount: 1 },
+      { name: 'coverImage', maxCount: 1 },
+    ]),
+  )
+  async uploadFile(
+    @Body() body: UploadFileDto,
+    @UploadedFiles()
+    files: {
+      profileImage?: Express.Multer.File[];
+      coverImage?: Express.Multer.File[];
+    },
+  ): Promise<FilesUploaded> {
+    try {
+      const profileImage = get(files, 'profileImage[0]', null);
+      const coverImage = get(files, 'coverImage[0]', null);
+      console.log(profileImage, coverImage);
+
+      return this.userService.filesUploaded(body.id, profileImage, coverImage);
+    } catch (error) {
+      throw new HttpException(
+        getErrorCodeAndMessage(error),
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    
+  }
+
+  @Get('/get-image-from-s3')
+  async getImageFromS3(@Body() body: ImageUrlDto) {
+    try {
+      return this.s3Service.getPublicUrl(body.image_key);
+    } catch {}
   }
 }
