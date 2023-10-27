@@ -30,6 +30,18 @@ export class User {
   })
   email: string;
 
+  @Column({
+    name: 'profile_image',
+    nullable: true,
+  })
+  profileImage: string;
+
+  @Column({
+    name: 'cover_image',
+    nullable: true,
+  })
+  coverImage: string;
+
   @CreateDateColumn({
     name: 'created_at',
     type: 'timestamptz',

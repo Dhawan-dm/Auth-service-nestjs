@@ -7,3 +7,8 @@ export interface UserTypes {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface FilesUploaded{
+  profileImage: string;
+  coverImage: string;
+}
